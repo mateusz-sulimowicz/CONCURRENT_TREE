@@ -285,16 +285,39 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     // smaller path first (to prevent deadlocks).
     if (strcmp(source, target) < 0) {
         source_parent_dir = tree_find_wr_lock(tree, source_parent_path);
+
+        if (!source_parent_dir) {
+            free(source_parent_path);
+            free(target_parent_path);
+            return ENOENT;
+        }
+
         target_parent_dir = tree_find_wr_lock(tree, target_parent_path);
+
+        if (!target_parent_dir) {
+            rwlock_wr_unlock(source_parent_dir->lock);
+            free(source_parent_path);
+            free(target_parent_path);
+            return ENOENT;
+        }
+
     } else {
         target_parent_dir = tree_find_wr_lock(tree, target_parent_path);
-        source_parent_dir = tree_find_wr_lock(tree, source_parent_path);
-    }
 
-    if (!source || !target) {
-        free(source_parent_path);
-        free(target_parent_path);
-        return ENOENT;
+        if (!target_parent_dir) {
+            free(source_parent_path);
+            free(target_parent_path);
+            return ENOENT;
+        }
+
+        source_parent_dir = tree_find_wr_lock(tree, source_parent_path);
+
+        if (!source_parent_dir) {
+            rwlock_wr_unlock(target_parent_dir->lock);
+            free(source_parent_path);
+            free(target_parent_path);
+            return ENOENT;
+        }
     }
 
     if (!hmap_get(source_parent_dir->subdirs, source_dir_name)) {
