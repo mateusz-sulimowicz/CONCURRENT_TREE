@@ -254,11 +254,15 @@ int tree_remove(Tree *tree, const char *path) {
 
     hmap_remove(parent->subdirs, subdir_name);
 
+    rwlock_wr_unlock(parent->lock);
+
     dir_free(dir);
+
+    // TODO: nie dziala wspolbieznie.
     return 0;
 }
 
-/*int tree_move(Tree *tree, const char *source, const char *target) {
+int tree_move(Tree *tree, const char *source, const char *target) {
     assert(tree != NULL);
 
     if (strcmp(source, "/") == 0) {
@@ -269,10 +273,59 @@ int tree_remove(Tree *tree, const char *path) {
         return EINVAL;
     }
 
-    Directory *source_dir = tree_find_wr_lock()
+    char source_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
+    char *source_parent_path = make_path_to_parent(source, source_dir_name);
+    Directory *source_parent_dir;
 
+    char target_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
+    char *target_parent_path = make_path_to_parent(source, target_dir_name);
+    Directory *target_parent_dir;
 
-}*/
+    // Lock the directory of lexicographically
+    // smaller path first (to prevent deadlocks).
+    if (strcmp(source, target) < 0) {
+        source_parent_dir = tree_find_wr_lock(tree, source_parent_path);
+        target_parent_dir = tree_find_wr_lock(tree, target_parent_path);
+    } else {
+        target_parent_dir = tree_find_wr_lock(tree, target_parent_path);
+        source_parent_dir = tree_find_wr_lock(tree, source_parent_path);
+    }
+
+    if (!source || !target) {
+        free(source_parent_path);
+        free(target_parent_path);
+        return ENOENT;
+    }
+
+    if (!hmap_get(source_parent_dir->subdirs, source_dir_name)) {
+        // Source dir does not exist.
+        rwlock_wr_unlock(source_parent_dir->lock);
+        rwlock_wr_unlock(target_parent_dir->lock);
+        free(source_parent_path);
+        free(target_parent_path);
+        return ENOENT;
+    }
+
+    if (hmap_get(target_parent_dir->subdirs, target_dir_name)) {
+        // Target dir already exists.
+        rwlock_wr_unlock(source_parent_dir->lock);
+        rwlock_wr_unlock(target_parent_dir->lock);
+        free(source_parent_path);
+        free(target_parent_path);
+        return EEXIST;
+    }
+
+    Directory *to_move = hmap_get(source_parent_dir->subdirs, source_dir_name);
+    hmap_remove(source_parent_dir->subdirs, source_dir_name);
+    hmap_insert(target_parent_dir->subdirs, source_dir_name, to_move);
+
+    rwlock_wr_unlock(source_parent_dir->lock);
+    rwlock_wr_unlock(target_parent_dir->lock);
+    free(source_parent_path);
+    free(target_parent_path);
+
+    return 0;
+}
 
 void tree_free(Tree *tree) {
     assert(tree != NULL);

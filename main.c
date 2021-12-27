@@ -1,5 +1,6 @@
 #include "HashMap.h"
 #include "path_utils.h"
+#include "Tree.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,9 +8,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void print_map(HashMap* map) {
-    const char* key = NULL;
-    void* value = NULL;
+void print_map(HashMap *map) {
+    const char *key = NULL;
+    void *value = NULL;
     printf("Size=%zd\n", hmap_size(map));
     HashMapIterator it = hmap_iterator(map);
     while (hmap_next(map, &it, &key, &value)) {
@@ -19,22 +20,39 @@ void print_map(HashMap* map) {
 }
 
 
-int main(void)
-{
-    HashMap* map = hmap_new();
+int main(void) {
+    HashMap *map = hmap_new();
     hmap_insert(map, "a", hmap_new());
     print_map(map);
 
-    HashMap* child = (HashMap*)hmap_get(map, "a");
+    HashMap *child = (HashMap *) hmap_get(map, "a");
     hmap_free(child);
     hmap_remove(map, "a");
     print_map(map);
 
     hmap_free(map);
 
-    char* c = "a/b/c/d";
-    char* p = make_path_to_parent(c, NULL);
+    char *c = "a/b/c/d";
+    char *p = make_path_to_parent(c, NULL);
     printf("%s", p);
     printf("%s", c);
+
+    Tree *t = tree_new();
+    tree_create(t, "/a/");
+    tree_create(t, "/b/");
+    tree_create(t, "/a/c/");
+
+    printf("\n%s", tree_list(t, "/a/"));
+
+    tree_create(t, "/a/d/");
+
+    tree_remove(t, "/a/c/");
+
+    tree_create(t, "/a/a/");
+
+    printf("\n%s", tree_list(t, "/a/"));
+
+    tree_free(t);
+
     return 0;
 }
