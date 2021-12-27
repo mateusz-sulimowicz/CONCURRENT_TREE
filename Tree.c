@@ -55,13 +55,6 @@ void dir_free(Directory *d) {
     free(d);
 }
 
-void dir_remove(Directory *d) {
-    assert(d != NULL);
-    // TODO: what to do with waiting threads when directory is removed?
-
-
-
-}
 
 char *dir_list(Directory *d) {
     assert(d != NULL);
@@ -233,7 +226,7 @@ int tree_remove(Tree *tree, const char *path) {
         return EINVAL;
     }
 
-    char subdir_name[(MAX_FOLDER_NAME_LENGTH + 1)];
+    char subdir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char *parent_path = make_path_to_parent(path, subdir_name);
     Directory *parent = tree_find_wr_lock(tree, parent_path);
 
@@ -261,7 +254,7 @@ int tree_remove(Tree *tree, const char *path) {
 
     hmap_remove(parent->subdirs, subdir_name);
 
-    dir_remove(dir);
+    dir_free(dir);
     return 0;
 }
 

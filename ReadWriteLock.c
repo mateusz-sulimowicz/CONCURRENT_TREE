@@ -6,13 +6,10 @@
 struct RWLock {
     size_t wait_wr;
     size_t wait_rd;
-    size_t wait_rm;
     size_t work_wr;
     size_t work_rd;
-    size_t work_rm;
     pthread_cond_t *to_read;
     pthread_cond_t *to_write;
-    pthread_cond_t *to_remove;
     pthread_mutex_t *mutex;
 };
 
@@ -26,7 +23,6 @@ RWLock *rwlock_new() {
     pthread_mutex_init(r->mutex, 0);
     pthread_cond_init(r->to_write, 0);
     pthread_cond_init(r->to_read, 0);
-    pthread_cond_init(r->to_remove, 0);
     return r;
 }
 
@@ -110,7 +106,7 @@ int rwlock_wr_unlock(RWLock *lock) {
     // always at most only one writer working
     if (lock->wait_rd > 0) {
         err = pthread_cond_broadcast(lock->to_read);
-    } else {
+    } else if (lock->wait_wr > 0) {
         err = pthread_cond_signal(lock->to_write);
     }
 
@@ -123,40 +119,12 @@ int rwlock_wr_unlock(RWLock *lock) {
 
 int rwlock_free(RWLock *lock) {
     int err;
+
     err = pthread_cond_destroy(lock->to_read);
     err = pthread_cond_destroy(lock->to_write);
     err = pthread_mutex_destroy(lock->mutex);
     free(lock);
+    // TODO: free memory of cond/mutex
+
     return err;
-}
-
-// TODO retval
-int rwlock_rm_lock(RWLock *lock) {
-    int err;
-    err = pthread_mutex_lock(lock->mutex);
-
-    if (err != 0) {
-        return err;
-    }
-
-    if (lock->wait_rm > 0) {
-        pthread_mutex_unlock(lock->mutex);
-        return EEXIST;
-    }
-
-    ++lock->wait_rm;
-    while (lock->work_rd > 0 || lock->work_wr > 0) {
-        err = pthread_cond_wait(lock->to_remove, lock->mutex);
-        if (err != 0) {
-            return err;
-        }
-    }
-    --lock->wait_rm;
-
-    ++lock->work_rm;
-    return pthread_mutex_unlock(lock->mutex);
-}
-
-int rwlock_rm_unlock(RWLock *lock) {
-
 }
