@@ -19,13 +19,22 @@ struct Directory {
 
 Directory *dir_new() {
     Directory *d = malloc(sizeof(Directory));
+
     if (d == NULL) {
         return NULL;
     }
 
-    // TODO: check if succeded
-    d->subdirs = hmap_new();
-    d->lock = rwlock_new();
+    if (!(d->subdirs = hmap_new())) {
+        free(d);
+        return NULL;
+    }
+
+    if (!(d->lock = rwlock_new())) {
+        hmap_free(d->subdirs);
+        free(d);
+        return NULL;
+    }
+
     return d;
 }
 
@@ -53,9 +62,18 @@ char *dir_list(Directory *d) {
 
 int dir_create(Directory *d, char *subdir_name) {
     assert(d != NULL && subdir_name != NULL);
-    Directory *subdir = dir_new();
-    hmap_insert(d->subdirs, subdir_name, subdir);
-    return 0; // TODO: check if succedded.
+    Directory *subdir;
+
+    if (!(subdir = dir_new())) {
+        return -1;
+    }
+
+    if (!(hmap_insert(d->subdirs, subdir_name, subdir))) {
+        dir_free(subdir);
+        return -1;
+    }
+
+    return 0;
 }
 
 // -----------------------
