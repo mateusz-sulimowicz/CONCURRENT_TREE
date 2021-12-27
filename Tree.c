@@ -55,6 +55,14 @@ void dir_free(Directory *d) {
     free(d);
 }
 
+void dir_remove(Directory *d) {
+    assert(d != NULL);
+    // TODO: what to do with waiting threads when directory is removed?
+
+
+
+}
+
 char *dir_list(Directory *d) {
     assert(d != NULL);
     return make_map_contents_string(d->subdirs);
@@ -76,7 +84,7 @@ int dir_create(Directory *d, char *subdir_name) {
     return 0;
 }
 
-// -----------------------
+// ----------------------------------------------
 
 struct Tree {
     Directory *root;
@@ -92,8 +100,9 @@ Tree *tree_new() {
     return t;
 }
 
-// finds and rd-locks the found directory
-Directory *tree_find_rd(Tree *tree, const char *path) {
+// Finds and rd-locks the found directory.
+// On failure, returns NULL.
+Directory *tree_find_rd_lock(Tree *tree, const char *path) {
     assert(tree != NULL && is_path_valid(path));
 
     if (strcmp(path, "/") == 0) {
@@ -102,15 +111,15 @@ Directory *tree_find_rd(Tree *tree, const char *path) {
         return tree->root;
     }
 
-    char component[MAX_FOLDER_NAME_LENGTH + 1];
+    char subdir_name[MAX_FOLDER_NAME_LENGTH + 1];
     const char *subpath = path;
 
     rwlock_rd_lock(tree->root->lock);
     Directory *current = tree->root;
     Directory *next = NULL;
 
-    while ((subpath = split_path(subpath, component))) {
-        next = hmap_get(current->subdirs, component);
+    while ((subpath = split_path(subpath, subdir_name))) {
+        next = hmap_get(current->subdirs, subdir_name);
 
         if (!next) {
             // subdirectory of current dir not found.
@@ -126,32 +135,34 @@ Directory *tree_find_rd(Tree *tree, const char *path) {
     return current;
 }
 
-// finds and wr-locks the found directory
-Directory *tree_find_wr(Tree *tree, const char *path) {
+// Finds and wr-locks the found directory.
+// On failure, returns NULL.
+Directory *tree_find_wr_lock(Tree *tree, const char *path) {
     assert(tree != NULL && is_path_valid(path));
     Directory *dir = NULL;
 
     if (strcmp(path, "/") == 0) {
-        // root dir
+        // Root directory
         rwlock_wr_lock(tree->root->lock);
         return tree->root;
     }
 
-    char component[MAX_FOLDER_NAME_LENGTH + 1];
-    char *parent_path = make_path_to_parent(path, component);
+    char subdir_name[MAX_FOLDER_NAME_LENGTH + 1];
+    char *parent_path = make_path_to_parent(path, subdir_name);
 
-    Directory *parent = tree_find_rd(tree, parent_path);
+    Directory *parent = tree_find_rd_lock(tree, parent_path);
 
     if (!parent) {
         free(parent_path);
         return NULL;
     }
 
-    dir = hmap_get(parent->subdirs, component);
+    dir = hmap_get(parent->subdirs, subdir_name);
 
     if (!dir) {
-        // directory not found
+        // Directory not found.
         rwlock_rd_unlock(parent->lock);
+        free(parent_path);
         return NULL;
     }
 
@@ -159,6 +170,7 @@ Directory *tree_find_wr(Tree *tree, const char *path) {
     // thread may try to lock a rwlock of removed directory.
     rwlock_wr_lock(dir->lock);
     rwlock_rd_unlock(parent->lock);
+    free(parent_path);
 
     return dir;
 }
@@ -170,26 +182,25 @@ int tree_create(Tree *tree, const char *path) {
         return EINVAL;
     }
 
-    char *component = malloc(sizeof(char) * (MAX_FOLDER_NAME_LENGTH + 1));
-    char *parent_path = make_path_to_parent(path, component);
-    Directory *parent = tree_find_wr(tree, parent_path);
+    char subdir_name[MAX_FOLDER_NAME_LENGTH + 1];
+    char *parent_path = make_path_to_parent(path, subdir_name);
+    Directory *parent = tree_find_wr_lock(tree, parent_path);
 
     if (!parent) {
-        free(component);
         free(parent_path);
         return ENOENT;
     }
 
-    if (hmap_get(parent->subdirs, component)) {
+    if (hmap_get(parent->subdirs, subdir_name)) {
         rwlock_wr_unlock(parent->lock);
-        free(component);
         free(parent_path);
         return EEXIST;
     }
 
-    int res = dir_create(parent, component);
+    int res = dir_create(parent, subdir_name);
     rwlock_wr_unlock(parent->lock);
     free(parent_path);
+
     return res;
 }
 
@@ -200,7 +211,7 @@ char *tree_list(Tree *tree, const char *path) {
         return NULL;
     }
 
-    Directory *d = tree_find_rd(tree, path);
+    Directory *d = tree_find_rd_lock(tree, path);
 
     if (!d) {
         return NULL;
@@ -222,33 +233,35 @@ int tree_remove(Tree *tree, const char *path) {
         return EINVAL;
     }
 
-    char component[(MAX_FOLDER_NAME_LENGTH + 1)];
-    char *parent_path = make_path_to_parent(path, component);
-    Directory *parent = tree_find_wr(tree, parent_path);
+    char subdir_name[(MAX_FOLDER_NAME_LENGTH + 1)];
+    char *parent_path = make_path_to_parent(path, subdir_name);
+    Directory *parent = tree_find_wr_lock(tree, parent_path);
 
     if (!parent) {
         free(parent_path);
         return ENOENT;
     }
 
-    if (!hmap_get(parent->subdirs, component)) {
+    if (!hmap_get(parent->subdirs, subdir_name)) {
         rwlock_wr_unlock(parent->lock);
         free(parent_path);
         return ENOENT;
     }
 
-    Directory *dir = hmap_get(parent->subdirs, component);
+    Directory *dir = hmap_get(parent->subdirs, subdir_name);
 
     rwlock_wr_lock(dir->lock);
 
     if (hmap_size(dir->subdirs) > 0) {
+        // directory is not empty
+        rwlock_wr_unlock(parent->lock);
+        rwlock_wr_unlock(dir->lock);
         return ENOTEMPTY;
     }
 
-    // TODO: what to do with waiting threads when directory is removed?
+    hmap_remove(parent->subdirs, subdir_name);
 
-    hmap_remove(parent->subdirs, component);
-    dir_free(dir);
+    dir_remove(dir);
     return 0;
 }
 
@@ -263,7 +276,7 @@ int tree_remove(Tree *tree, const char *path) {
         return EINVAL;
     }
 
-    Directory *source_dir = tree_find_wr()
+    Directory *source_dir = tree_find_wr_lock()
 
 
 }*/
