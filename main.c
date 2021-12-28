@@ -32,17 +32,22 @@ int main(void) {
 
     hmap_free(map);
 
-    char *c = "a/b/c/d";
-    char *p = make_path_to_parent(c, NULL);
-    printf("%s", p);
-    printf("%s", c);
 
     Tree *t = tree_new();
     tree_create(t, "/a/");
     tree_create(t, "/b/");
     tree_create(t, "/a/c/");
 
+    tree_move(t, "/a/", "/c/");
+
+
+    printf("\nZawartosc a:\n");
     printf("\n%s", tree_list(t, "/a/"));
+    printf("\nZawartosc b:\n");
+    printf("\n%s", tree_list(t, "/b/"));
+    printf("\nZawartosc c:\n");
+    printf("\n%s", tree_list(t, "/c/"));
+
 
     tree_create(t, "/a/d/");
 
@@ -50,7 +55,6 @@ int main(void) {
 
     tree_create(t, "/a/a/");
 
-    printf("\n%s", tree_list(t, "/a/"));
 
     tree_free(t);
 
