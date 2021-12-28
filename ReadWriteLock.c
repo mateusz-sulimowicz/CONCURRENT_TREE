@@ -15,10 +15,7 @@ struct RWLock {
 
 RWLock *rwlock_new() {
     RWLock *r = malloc(sizeof(RWLock));
-
-    if (!r) {
-        return NULL;
-    }
+    if (!r) return NULL;
 
     if (pthread_mutex_init(&r->mutex, 0) != 0) return NULL;
 
