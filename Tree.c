@@ -73,6 +73,34 @@ int dir_create(Directory *d, char *subdir_name) {
     return 0;
 }
 
+int dir_find(Directory **out, Directory *root, const char *path) {
+    assert(root != NULL && is_path_valid(path));
+    int err;
+
+    char child_name[MAX_FOLDER_NAME_LENGTH + 1];
+    const char *subpath = path;
+
+    Directory *parent = root->parent;
+    Directory *child = root;
+    if ((err = rwlock_rd_lock(parent->lock)) != 0) return err;
+
+    // TODO
+    while ((subpath = split_path(subpath, child_name))) {
+        if ((err = rwlock_rd_lock(child->lock)) != 0) return err;
+        if ((err = rwlock_rd_unlock(parent->lock)) != 0) return err;
+        parent = child;
+
+        if (!(child = hmap_get(parent->subdirs, child_name))) {
+            // subdir not found.
+            rwlock_rd_unlock(parent->lock);
+            return ENOENT;
+        }
+    }
+
+    *out = child;
+    return 0;
+}
+
 // ----------------------------------------------
 
 struct Tree {
@@ -93,38 +121,10 @@ Tree *tree_new() {
     return t;
 }
 
-// Finds and read-locks parent of the found directory.
-int tree_find(Directory **d, Tree *tree, const char *path) {
+// Finds directory  and read-locks its parent.
+int tree_find(Directory **out, Tree *tree, const char *path) {
     assert(tree != NULL && is_path_valid(path));
-    int err;
-
-    if (strcmp(path, "/") == 0) {
-        // root dir
-        *d = tree->root;
-        return 0;
-    }
-
-    char child_name[MAX_FOLDER_NAME_LENGTH + 1];
-    const char *subpath = path;
-
-    Directory *parent = tree->root->parent;
-    Directory *child = tree->root;
-
-    // TODO
-    while ((subpath = split_path(subpath, child_name))) {
-        if ((err = rwlock_rd_lock(child->lock)) != 0) return err;
-        if ((err = rwlock_rd_unlock(parent->lock)) != 0) return err;
-        parent = child;
-
-        if (!(child = hmap_get(parent->subdirs, child_name))) {
-            // subdirectory of parent dir not found.
-            rwlock_rd_unlock(parent->lock);
-            return ENOENT;
-        }
-    }
-
-    *d = child;
-    return 0;
+    return dir_find(out, tree->root, path);
 }
 
 int tree_create(Tree *tree, const char *path) {
@@ -234,6 +234,33 @@ int tree_remove(Tree *tree, const char *path) {
     free(parent_path);
     return err;
 }
+
+int tree_move(Tree *tree, const char *source, const char *target) {
+    assert(tree && source && target);
+
+    if (!is_path_valid(source) || !is_path_valid(target))
+        return EINVAL;
+
+    if (strcmp(source, target) == 0) return 0;
+
+    if (is_subpath(target, source)) return -2; // TODO: describe error code.
+
+    if (is_subpath(source, target)) {
+
+    // TODO
+
+
+    } else {
+
+
+
+
+
+    }
+
+
+}
+
 
 /*
 int tree_move(Tree *tree, const char *source, const char *target) {

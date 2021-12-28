@@ -37,11 +37,14 @@ int main(void) {
     tree_create(t, "/a/");
     tree_create(t, "/b/");
     tree_create(t, "/a/c/");
+    tree_create(t, "/a/c/d/");
 
     tree_remove(t, "/a/c/");
 
     printf("\nZawartosc a:\n");
     printf("\n%s", tree_list(t, "/a/"));
+    printf("\nZawartosc a/c:\n");
+    printf("\n%s", tree_list(t, "/a/c/"));
     printf("\nZawartosc b:\n");
     printf("\n%s", tree_list(t, "/b/"));
     printf("\nZawartosc c:\n");
@@ -56,6 +59,8 @@ int main(void) {
 
 
     tree_free(t);
+
+    printf("\n %d\n", is_subpath("/b/", "/a/"));
 
     return 0;
 }

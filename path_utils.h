@@ -49,3 +49,6 @@ const char** make_map_contents_array(HashMap* map);
 // The result has no trailing comma. An empty map yields an empty string.
 // The caller should free the result.
 char* make_map_contents_string(HashMap* map);
+
+// Return true if, and only if `path1` is a subpath of `path2`.
+bool is_subpath(const char *path1, const char *path2);
