@@ -17,18 +17,28 @@ RWLock *rwlock_new() {
     RWLock *r = malloc(sizeof(RWLock));
     if (!r) return NULL;
 
-    if (pthread_mutex_init(&r->mutex, 0) != 0) return NULL;
+    if (pthread_mutex_init(&r->mutex, 0) != 0) {
+        free(r);
+        return NULL;
+    }
 
     if (pthread_cond_init(&r->to_write, 0) != 0) {
         pthread_mutex_destroy(&r->mutex);
+        free(r);
         return NULL;
     }
 
     if (pthread_cond_init(&r->to_read, 0) != 0) {
         pthread_mutex_destroy(&r->mutex);
         pthread_cond_destroy(&r->to_read);
+        free(r);
         return NULL;
     }
+
+    r->wait_wr = 0;
+    r->wait_rd = 0;
+    r->work_wr = 0;
+    r->work_rd = 0;
     return r;
 }
 
