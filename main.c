@@ -38,8 +38,7 @@ int main(void) {
     tree_create(t, "/b/");
     tree_create(t, "/a/c/");
 
-    tree_move(t, "/a/", "/c/");
-
+    tree_remove(t, "/a/c/");
 
     printf("\nZawartosc a:\n");
     printf("\n%s", tree_list(t, "/a/"));
