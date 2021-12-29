@@ -41,6 +41,20 @@ int main(void) {
 
     tree_remove(t, "/a/c/");
 
+    tree_create(t, "/a/z");
+    tree_create(t, "/b/s");
+    tree_create(t, "/a/c/a");
+    tree_create(t, "/a/c/d/r");
+
+    tree_remove(t, "/a/c/a");
+
+    tree_create(t, "/a/z/s");
+    tree_create(t, "/b/s/s");
+    tree_create(t, "/a/c/a/s");
+    tree_create(t, "/a/c/d/r/s");
+
+    tree_remove(t, "/a/c/d/r/s");
+
     printf("\nZawartosc a:\n");
     printf("\n%s", tree_list(t, "/a/"));
     printf("\nZawartosc a/c:\n");
