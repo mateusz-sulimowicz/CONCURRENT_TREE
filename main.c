@@ -93,11 +93,11 @@ int main(void) {
     assert(tree_create(tree, "/b/") == 0);
     assert(tree_create(tree, "/a/c/") == 0);
     assert(tree_create(tree, "/a/c/d/") == 0);
-  /*  assert(tree_move(tree, "/a/c/", "/b/c/") == 0);
+    assert(tree_move(tree, "/a/c/", "/b/c/") == 0);
     assert(tree_remove(tree, "/b/c/d/") == 0);
     list_content = tree_list(tree, "/b/");
     assert(strcmp(list_content, "c") == 0);
-    free(list_content);*/
+    free(list_content);
     tree_free(tree);
 
 
