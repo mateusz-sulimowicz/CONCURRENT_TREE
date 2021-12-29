@@ -176,6 +176,8 @@ int tree_create(Tree *tree, const char *path) {
 
     if (!is_path_valid(path)) return EINVAL;
 
+    if (strcmp(path, "/") == 0) return EEXIST;
+
     char subdir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char *parent_path = make_path_to_parent(path, subdir_name);
     Directory *parent = NULL;
@@ -276,6 +278,7 @@ int tree_move(Tree *tree, const char *source, const char *target) {
 
     if (!is_path_valid(source) || !is_path_valid(target)) return EINVAL;
     if (strcmp(source, "/") == 0) return EBUSY;
+    if (strcmp(target, "/") == 0) return EEXIST;
     if (strcmp(source, target) == 0) return 0;
     if (is_subpath(target, source)) return -2; // TODO: describe error code.
 
@@ -359,7 +362,6 @@ int tree_move(Tree *tree, const char *source, const char *target) {
         return err;
     }
 }
-
 
 /*
 int tree_move(Tree *tree, const char *source, const char *target) {

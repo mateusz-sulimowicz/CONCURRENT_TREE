@@ -117,8 +117,14 @@ bool is_subpath(const char *path1, const char *path2) {
 
     const char *subpath1 = path1;
     const char *subpath2 = path2;
-    while ((subpath1 = split_path(subpath1, NULL))
-           && (subpath2 = split_path(subpath2, NULL))) {}
+    char dirname1[MAX_FOLDER_NAME_LENGTH + 1];
+    char dirname2[MAX_FOLDER_NAME_LENGTH + 1];
+    while ((subpath1 = split_path(subpath1, dirname1))
+           && (subpath2 = split_path(subpath2, dirname2))) {
+        if (strcmp(dirname1, dirname2) != 0) {
+            return false;
+        }
+    }
 
     return subpath1 && !subpath2;
 }
