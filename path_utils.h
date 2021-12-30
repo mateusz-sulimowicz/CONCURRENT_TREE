@@ -12,7 +12,7 @@
 // Valid paths are '/'-separated sequences of folder names, always starting and ending with '/'.
 // Valid paths have length at most MAX_PATH_LENGTH (and at least 1). Valid folder names are are
 // sequences of 'a'-'z' ASCII characters, of length from 1 to MAX_FOLDER_NAME_LENGTH.
-bool is_path_valid(const char* path);
+bool is_path_valid(const char *path);
 
 // Return the subpath obtained by removing the first component.
 // Args:
@@ -27,7 +27,7 @@ bool is_path_valid(const char* path);
 //     const char* subpath = path;
 //     while (subpath = split_path(subpath, component))
 //         printf("%s", component);
-const char* split_path(const char* path, char* component);
+const char *split_path(const char *path, char *component);
 
 // Return a copy of the subpath obtained by removing the last component.
 // The caller should free the result, unless it is NULL.
@@ -37,18 +37,22 @@ const char* split_path(const char* path, char* component);
 //    Then the last component will be copied there (without any '/' characters).
 // If path is "/", returns NULL and leaves `component` unchanged.
 // Otherwise the result is a valid path.
-char* make_path_to_parent(const char* path, char* component);
+char *make_path_to_parent(const char *path, char *component);
 
 // Return an array containing all keys, lexicographically sorted.
 // The result is null-terminated.
 // Keys are not copied, they are only valid as long as the map.
 // The caller should free the result.
-const char** make_map_contents_array(HashMap* map);
+const char **make_map_contents_array(HashMap *map);
 
 // Return a string containing all keys in map, sorted, comma-separated.
 // The result has no trailing comma. An empty map yields an empty string.
 // The caller should free the result.
-char* make_map_contents_string(HashMap* map);
+char *make_map_contents_string(HashMap *map);
 
 // Return true if, and only if `path1` is a subpath of `path2`.
 bool is_subpath(const char *path1, const char *path2);
+
+char *make_common_path(const char *path1, const char *path2);
+
+void split_common_path(char **path1, char **path2);

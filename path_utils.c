@@ -128,3 +128,34 @@ bool is_subpath(const char *path1, const char *path2) {
 
     return subpath1 && !subpath2;
 }
+
+char *make_common_path(const char *path1, const char *path2) {
+    assert(is_path_valid(path1) && is_path_valid(path2));
+
+    size_t i = 0;
+    while (path1[i] == path2[i]) {
+        ++i;
+    }
+
+    size_t common_len = i;
+    char *subpath = malloc(common_len + 1);
+    if (!subpath) return NULL;
+
+    strncpy(subpath, path1, common_len);
+    subpath[common_len] = '\0';
+
+    assert(is_path_valid(subpath));
+    return subpath;
+}
+
+void split_common_path(char **path1, char **path2) {
+    assert(is_path_valid(*path1) && is_path_valid(*path2));
+
+    char *common_path = make_common_path(*path1, *path2);
+    if (!common_path) return;
+
+    size_t common_path_len = strlen(common_path);
+    *path1 += common_path_len - 1; // -1 to not cut off the last common '/'
+    *path2 += common_path_len - 1;
+    free(common_path);
+}

@@ -10,78 +10,33 @@
 #include <assert.h>
 #include <asm-generic/errno.h>
 
-void print_map(HashMap *map) {
-    const char *key = NULL;
-    void *value = NULL;
-    printf("Size=%zd\n", hmap_size(map));
-    HashMapIterator it = hmap_iterator(map);
-    while (hmap_next(map, &it, &key, &value)) {
-        printf("Key=%s Value=%p\n", key, value);
-    }
-    printf("\n");
+
+#include <assert.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <errno.h>
+#include <stdbool.h>
+
+bool my_path_valid(const char *path) {
+    Tree *tree = tree_new();
+    int ret = tree_create(tree, path);
+    tree_free(tree);
+    return ret != EINVAL;
 }
 
+char* fill_with_component(char *s, size_t len) {
+    s[0] = '/';
+    for (size_t i = 1; i <= len; ++i)
+        s[i] = 'a';
+    s[len + 1] = '/';
+    s[len + 2] = '\0';
+    return s + len + 1;
+}
 
-int main(void) {
- /*   HashMap *map = hmap_new();
-    hmap_insert(map, "a", hmap_new());
-    print_map(map);
-
-    HashMap *child = (HashMap *) hmap_get(map, "a");
-    hmap_free(child);
-    hmap_remove(map, "a");
-    print_map(map);
-
-    hmap_free(map);
-
-
-    Tree *t = tree_new();
-    tree_create(t, "/a/");
-    tree_create(t, "/b/");
-    tree_create(t, "/a/c/");
-    tree_create(t, "/a/c/d/");
-
-    tree_remove(t, "/a/c/");
-
-    tree_create(t, "/a/z");
-    tree_create(t, "/b/s");
-    tree_create(t, "/a/c/a");
-    tree_create(t, "/a/c/d/r");
-
-    tree_remove(t, "/a/c/a");
-
-    tree_create(t, "/a/z/s");
-    tree_create(t, "/b/s/s");
-    tree_create(t, "/a/c/a/s");
-    tree_create(t, "/a/c/d/r/s");
-
-    tree_remove(t, "/a/c/d/r/s");
-
-    printf("\nZawartosc a:\n");
-    printf("\n%s", tree_list(t, "/a/"));
-    printf("\nZawartosc a/c:\n");
-    printf("\n%s", tree_list(t, "/a/c/"));
-    printf("\nZawartosc b:\n");
-    printf("\n%s", tree_list(t, "/b/"));
-    printf("\nZawartosc c:\n");
-    printf("\n%s", tree_list(t, "/c/"));
-
-
-    tree_create(t, "/a/d/");
-
-    tree_remove(t, "/a/c/");
-
-    tree_create(t, "/a/a/");
-
-
-    tree_free(t);
-
-    printf("\n %d\n", is_subpath("/b/", "/a/"));
-*/
-    Tree *tree = tree_new();
+int main() {
+  /*  Tree *tree = tree_new();
     char *list_content = tree_list(tree, "/");
-    printf("%s\n", list_content);
-
     assert(strcmp(list_content, "") == 0);
     free(list_content);
     assert(tree_list(tree, "/a/") == NULL);
@@ -99,7 +54,16 @@ int main(void) {
     assert(strcmp(list_content, "c") == 0);
     free(list_content);
     tree_free(tree);
+*/
 
+  char path1[] = "/a/b/c/e/";
+  char path2[] = "/a/b/c/d/";
+  char *sp1 = path1;
+  char *sp2 = path2;
+  split_common_path(&sp1, &sp2);
+  printf("%s\n", sp1);
+  printf("%s\n", sp2);
 
-    return 0;
+  printf("%s", make_common_path("/a/b/c/", "/a/b/d/"));
+
 }
