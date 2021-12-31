@@ -55,4 +55,4 @@ bool is_subpath(const char *path1, const char *path2);
 
 char *make_common_path(const char *path1, const char *path2);
 
-void split_common_path(char **path1, char **path2);
+int split_common_path(char **path1, char **path2);

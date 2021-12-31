@@ -35,7 +35,7 @@ char* fill_with_component(char *s, size_t len) {
 }
 
 int main() {
-  /*  Tree *tree = tree_new();
+    Tree *tree = tree_new();
     char *list_content = tree_list(tree, "/");
     assert(strcmp(list_content, "") == 0);
     free(list_content);
@@ -54,16 +54,7 @@ int main() {
     assert(strcmp(list_content, "c") == 0);
     free(list_content);
     tree_free(tree);
-*/
 
-  char path1[] = "/a/b/c/e/";
-  char path2[] = "/a/b/c/d/";
-  char *sp1 = path1;
-  char *sp2 = path2;
-  split_common_path(&sp1, &sp2);
-  printf("%s\n", sp1);
-  printf("%s\n", sp2);
 
-  printf("%s", make_common_path("/a/b/c/", "/a/b/d/"));
 
 }

@@ -10,6 +10,7 @@ add_library(HashMap HashMap.c)
 add_library(Tree Tree.c ReadWriteLock.c path_utils.c)
 
 add_executable(main main.c)
+#[[include("${CMAKE_CURRENT_SOURCE_DIR}/testy-zad2/CMakeExtension.txt")]]
 target_link_libraries(main Tree HashMap err pthread)
 
 install(TARGETS DESTINATION .)

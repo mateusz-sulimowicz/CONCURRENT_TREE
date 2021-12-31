@@ -148,14 +148,15 @@ char *make_common_path(const char *path1, const char *path2) {
     return subpath;
 }
 
-void split_common_path(char **path1, char **path2) {
+int split_common_path(char **path1, char **path2) {
     assert(is_path_valid(*path1) && is_path_valid(*path2));
 
     char *common_path = make_common_path(*path1, *path2);
-    if (!common_path) return;
+    if (!common_path) return -1;
 
     size_t common_path_len = strlen(common_path);
     *path1 += common_path_len - 1; // -1 to not cut off the last common '/'
     *path2 += common_path_len - 1;
     free(common_path);
+    return 0;
 }
