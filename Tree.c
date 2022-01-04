@@ -307,7 +307,7 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     if (!is_path_valid(source) || !is_path_valid(target)) return EINVAL;
     if (strcmp(source, "/") == 0) return EBUSY;
     if (strcmp(target, "/") == 0) return EEXIST;
-    if (is_subpath(target, source)) return -2; // TODO: describe error code.
+    if (is_subpath(target, source)) return EMOVE; // TODO: describe error code.
 
     char source_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char target_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
