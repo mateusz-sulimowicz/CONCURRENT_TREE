@@ -5,6 +5,10 @@
 #include "ReadWriteLock.h"
 #include "err.h"
 
+
+/**
+ * Read-write lock implementation.
+ */
 struct RWLock {
     size_t wait_wr;
     size_t wait_rd;
@@ -39,6 +43,7 @@ RWLock *rwlock_new() {
     return r;
 }
 
+// Acquire read lock.
 int rwlock_rd_lock(RWLock *lock) {
     int err;
     if ((err = pthread_mutex_lock(&lock->mutex)) != 0) {
@@ -60,6 +65,7 @@ int rwlock_rd_lock(RWLock *lock) {
     return pthread_mutex_unlock(&lock->mutex);
 }
 
+// Release read lock.
 int rwlock_rd_unlock(RWLock *lock) {
     int err;
     if ((err = pthread_mutex_lock(&lock->mutex)) != 0) {
@@ -79,6 +85,7 @@ int rwlock_rd_unlock(RWLock *lock) {
     return pthread_mutex_unlock(&lock->mutex);
 }
 
+// Acquire write lock.
 int rwlock_wr_lock(RWLock *lock) {
     int err;
     if ((err = pthread_mutex_lock(&lock->mutex)) != 0) {
@@ -97,6 +104,7 @@ int rwlock_wr_lock(RWLock *lock) {
     return pthread_mutex_unlock(&lock->mutex);
 }
 
+// Release write lock.
 int rwlock_wr_unlock(RWLock *lock) {
     int err;
     if ((err = pthread_mutex_lock(&lock->mutex)) != 0) {
