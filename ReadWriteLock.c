@@ -53,7 +53,9 @@ int rwlock_rd_lock(RWLock *lock) {
     --lock->wait_rd;
 
     ++lock->work_rd;
-    return pthread_mutex_unlock(&lock->mutex);
+    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
+        syserr("", err);
+    return 0;
 }
 
 // Release read lock.
@@ -69,7 +71,9 @@ int rwlock_rd_unlock(RWLock *lock) {
         if ((err = pthread_cond_broadcast(&lock->to_read)) != 0)
             syserr("", err);
     }
-    return pthread_mutex_unlock(&lock->mutex);
+    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
+        syserr("", err);
+    return 0;
 }
 
 // Acquire write lock.
@@ -85,7 +89,9 @@ int rwlock_wr_lock(RWLock *lock) {
     }
     --lock->wait_wr;
     ++lock->work_wr;
-    return pthread_mutex_unlock(&lock->mutex);
+    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
+        syserr("", err);
+    return 0;
 }
 
 // Release write lock.
@@ -102,7 +108,9 @@ int rwlock_wr_unlock(RWLock *lock) {
         if ((err = pthread_cond_signal(&lock->to_write)) != 0)
             syserr("", err);
     }
-    return pthread_mutex_unlock(&lock->mutex);
+    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
+        syserr("", err);
+    return 0;
 }
 
 int rwlock_free(RWLock *lock) {
