@@ -75,7 +75,6 @@ int dir_create(Directory *d, char *subdir_name) {
 }
 
 
-// Finds directory and read-locks its parent.
 int dir_find(Directory **out, Directory *root, const char *path) {
     assert(root != NULL && is_path_valid(path));
 
@@ -88,6 +87,30 @@ int dir_find(Directory **out, Directory *root, const char *path) {
         parent = child;
         child = hmap_get(parent->subdirs, child_name);
         if (!child) return ENOENT;
+    }
+    *out = child;
+    return 0;
+}
+
+// Finds subdirectory and write-locks it's parent.
+int dir_find_subdir_wr(Directory **out, Directory *root, const char *path) {
+    assert(root != NULL && is_path_valid(path));
+    assert(strcmp(path, "/") != 0);
+    // assert that root is wrlocked. // TODO:
+
+    char child_name[MAX_FOLDER_NAME_LENGTH + 1];
+    const char *subpath = path;
+
+    Directory *parent = root;
+    Directory *child = NULL;
+    while ((subpath = split_path(subpath, child_name))) {
+        child = hmap_get(parent->subdirs, child_name);
+        if (!child) {
+            if (parent != root) rwlock_wr_unlock(parent->lock);
+            return ENOENT;
+        }
+        rwlock_wr_lock(child->lock);
+        if (parent != root) rwlock_wr_unlock(parent->lock);
     }
     *out = child;
     return 0;
@@ -149,7 +172,7 @@ int tree_find_common(Directory **out, Tree *tree, const char *path1, const char 
     return err;
 }
 
-int tree_find2_wrlock(Directory **common, Directory **out1, Directory **out2,
+/*int tree_find2_wrlock(Directory **common, Directory **out1, Directory **out2,
                       Tree *tree, char *path1, char *path2) {
     assert(tree != NULL && is_path_valid(path1) && is_path_valid(path2));
 
@@ -209,7 +232,8 @@ int tree_find2_wrlock(Directory **common, Directory **out1, Directory **out2,
     }
     *out2 = parent;
     return 0;
-}
+}*/
+
 
 int tree_wrlock(Directory *root) {
     assert(root != NULL);
@@ -250,6 +274,57 @@ int tree_wr_unlock(Directory *root) {
 
     rwlock_wr_unlock(root->lock);
     return 0;
+}
+
+// Finds and write-locks source & target's common ancestor,
+// then finds and write-locks target,
+// then finds and write-locks source,
+// then releases the ancestor.
+int tree_find_wrlock2(Directory **source, Directory **target, Tree *tree,
+                      char *source_path, char *target_path) {
+    assert(tree && source_path && target_path);
+    assert(!is_subpath(target_path, source_path));
+    int err;
+
+    Directory *common = NULL;
+    err = tree_find_common(&common, tree, source_path, target_path);
+    if (err) return err;
+
+    rwlock_wr_lock(common->lock);
+    rwlock_rd_unlock(common->parent->lock);
+
+    if (strcmp(source_path, target_path) == 0) {
+        tree_wrlock_subtree(common);
+        *source = common;
+        *target = common;
+        return 0;
+    }
+
+    char *source_subpath = source_path;
+    char *target_subpath = target_path;
+    split_common_path(&source_subpath, &target_subpath);
+
+    if (is_subpath(source_path, target_path)) {
+        *target = common;
+        err = dir_find_subdir_wr(source, common, source_subpath);
+        if (err) {
+            rwlock_wr_unlock(common->lock);
+            return err;
+        }
+    } else {
+        err = dir_find_subdir_wr(target, common, target_subpath);
+        if (err) {
+            rwlock_wr_unlock(common->lock);
+            return err;
+        }
+        err = dir_find_subdir_wr(source, common, source_subpath);
+        if (err) {
+            rwlock_wr_unlock(common->lock);
+            rwlock_wr_unlock((*target)->lock);
+            return err;
+        }
+    }
+    return err;
 }
 
 int tree_create(Tree *tree, const char *path) {
@@ -357,6 +432,7 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     if (strcmp(target, "/") == 0) return EEXIST;
     if (is_subpath(target, source)) return -2; // TODO: describe error code.
 
+    int err;
     char source_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char target_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char *source_parent_path = make_path_to_parent(source, source_dir_name);
@@ -366,22 +442,10 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     Directory *source_parent = NULL;
     Directory *target_parent = NULL;
 
-    int err = tree_find_common(&common, tree, source_parent_path, target_parent_path);
-    if (err) {
-        free(source_parent_path);
-        free(target_parent_path);
-        return err;
-    }
+    err = tree_find_wrlock2(&source_parent, &target_parent, tree,
+                            source_parent_path, target_parent_path);
 
-    tree_wrlock(common);
-    rwlock_rd_unlock(common->parent->lock);
-
-    char *sp1 = source_parent_path;
-    char *sp2 = target_parent_path;
-    err = split_common_path(&sp1, &sp2);
-
-    if (!err) err = dir_find(&source_parent, common, sp1);
-    if (!err) err = dir_find(&target_parent, common, sp2);
+    tree_wrlock_subtree(source_parent);
 
     Directory *moved = NULL;
     if (!err) {
@@ -392,13 +456,17 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     if (!err && hmap_get(target_parent->subdirs, target_dir_name))
         err = EEXIST;
 
-    if (!err) {
+    if (err) {
+        tree_wr_unlock(source_parent);
+        rwlock_wr_unlock(target_parent->lock);
+    } else {
         hmap_remove(source_parent->subdirs, source_dir_name);
         hmap_insert(target_parent->subdirs, target_dir_name, moved);
         moved->parent = target_parent;
+        tree_wr_unlock(target_parent);
+        rwlock_wr_unlock(source_parent->lock);
     }
 
-    tree_wr_unlock(common);
     free(source_parent_path);
     free(target_parent_path);
     return err;

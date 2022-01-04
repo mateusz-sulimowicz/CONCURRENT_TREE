@@ -34,6 +34,8 @@ char* fill_with_component(char *s, size_t len) {
     return s + len + 1;
 }
 
+int f(int err) { if (-20 <= err && err <= -1) return -1; return err; }
+
 int main() {
     Tree *tree = tree_new();
     char *list_content = tree_list(tree, "/");
@@ -54,7 +56,5 @@ int main() {
     assert(strcmp(list_content, "c") == 0);
     free(list_content);
     tree_free(tree);
-
-
 
 }
