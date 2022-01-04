@@ -128,7 +128,10 @@ int dir_move(Directory *source_parent, Directory *target_parent,
     Directory *moved = NULL;
     moved = hmap_get(source_parent->subdirs, source_dir_name);
     if (!moved) err = ENOENT;
-    if (!err && hmap_get(target_parent->subdirs, target_dir_name)) err = EEXIST;
+    if (!err
+        && !((source_parent == target_parent) && strcmp(source_dir_name, target_dir_name) == 0)
+        && hmap_get(target_parent->subdirs, target_dir_name))
+        err = EEXIST;
 
     if (!err) {
         dir_wr_lock(moved);
