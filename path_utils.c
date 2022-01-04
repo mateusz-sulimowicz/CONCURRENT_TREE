@@ -93,6 +93,7 @@ char *make_map_contents_string(HashMap *map) {
         // Note we can't just return "", as it can't be free'd.
         char *result = malloc(1);
         *result = '\0';
+        free(keys);
         return result;
     }
 
@@ -133,7 +134,9 @@ char *make_common_path(const char *path1, const char *path2) {
     assert(is_path_valid(path1) && is_path_valid(path2));
 
     size_t i = 0;
-    while (path1[i] == path2[i]) {
+    while (path1[i] != '\0'
+           && path2[i] != '\0'
+           && path1[i] == path2[i]) {
         ++i;
     }
 
