@@ -219,7 +219,8 @@ int dir_find_common(Directory **out, Directory *root, const char *path1, const c
 // Finds and write-locks out1 & out2's common ancestor,
 // then finds and write-locks out1 & out2,
 // If the ancestor is not *out1 or *out2, it is unlocked
-// before locking the *out2 node
+// after locking the *out2 node
+// and before locking the *out1 node
 // Tree traversal lock type: WRITE.
 int dir_find_wr_lock2(Directory **out1, Directory **out2, Directory *root,
                       char *path1, char *path2) {
