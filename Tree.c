@@ -118,6 +118,8 @@ int dir_create(Directory *d, char *subdir_name) {
     return 0;
 }
 
+// Write-locks the whole subtree of moved directory,
+// then moves it.
 int dir_move(Directory *source_parent, Directory *target_parent,
              const char *source_dir_name, const char *target_dir_name) {
     // assert that source_parent AND target_parent are write-locked.
@@ -392,10 +394,8 @@ int tree_remove(Tree *tree, const char *path) {
     return 0;
 }
 
-// To prevent deadlocks:
-// - finds and write-locks the last common ancestor of source & target
-// - finds and write-locks source and target directories.
-// then, whole subtree of moved directory is write-locked
+// To prevent deadlocks: @see dir_find_wr_lock2() comment.
+// Then, whole subtree of moved directory is write-locked
 // and it is moved to the new location.
 int tree_move(Tree *tree, const char *source, const char *target) {
     assert(tree && source && target);
