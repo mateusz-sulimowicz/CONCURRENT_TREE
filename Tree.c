@@ -355,10 +355,10 @@ int tree_move(Tree *tree, const char *source, const char *target) {
     if (!is_path_valid(source) || !is_path_valid(target)) return EINVAL;
     if (strcmp(source, "/") == 0) return EBUSY;
     if (strcmp(target, "/") == 0) return EEXIST;
-    if (strcmp(source, target) == 0) return -2;
+/*    if (strcmp(source, target) == 0) return -2;*/
     if (is_subpath(target, source)) return -2; // TODO: describe error code.
-    if (is_subpath(source, target)) return -2; // TODO: describe error code.
-
+   /* if (is_subpath(source, target)) return -2; // TODO: describe error code.
+*/
     char source_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char target_dir_name[MAX_FOLDER_NAME_LENGTH + 1];
     char *source_parent_path = make_path_to_parent(source, source_dir_name);
