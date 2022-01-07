@@ -28,10 +28,10 @@
  * it is holding a lock on the node's parent.
  * Thus, when thread is trying to remove a node
  * and it has already write-locked the node's parent,
- * there are no other nodes waiting to lock the node.
+ * there are no other threads waiting to lock the node.
  * Hence, when the thread successfully
  * write-locks the node (still write-locking it's parent),
- * no other nodes are waiting on the node's lock,
+ * no other threads are waiting on the node's lock,
  * or working on the node.
  */
 
@@ -217,11 +217,13 @@ int dir_find_common(Directory **out, Directory *root, const char *path1, const c
 }
 
 // Finds and write-locks out1 & out2's common ancestor,
+// (tree traversal lock type: READ)
 // then finds and write-locks out1 & out2,
+// (Tree traversal lock type: WRITE.)
+//
 // If the ancestor is not *out1 or *out2, it is unlocked
 // after locking the *out2 node
 // and before locking the *out1 node
-// Tree traversal lock type: WRITE.
 int dir_find_wr_lock2(Directory **out1, Directory **out2, Directory *root,
                       char *path1, char *path2) {
     assert(root && path1 && path2);

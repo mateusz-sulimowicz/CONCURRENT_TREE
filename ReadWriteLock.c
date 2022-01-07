@@ -22,13 +22,14 @@ struct RWLock {
 RWLock *rwlock_new() {
     int err;
     RWLock *r = malloc(sizeof(RWLock));
-    if (!r) {
-        syserr("", EMEMORY);
-    }
+    if (!r) syserr("", EMEMORY);
 
-    if ((err = pthread_mutex_init(&r->mutex, 0)) != 0) syserr("", err);
-    if (pthread_cond_init(&r->to_write, 0) != 0) syserr("", err);
-    if (pthread_cond_init(&r->to_read, 0) != 0) syserr("", err);
+    if ((err = pthread_mutex_init(&r->mutex, 0)) != 0)
+        syserr("", err);
+    if (pthread_cond_init(&r->to_write, 0) != 0)
+        syserr("", err);
+    if (pthread_cond_init(&r->to_read, 0) != 0)
+        syserr("", err);
 
     r->wait_wr = 0;
     r->wait_rd = 0;
@@ -39,86 +40,66 @@ RWLock *rwlock_new() {
 
 // Acquire read lock.
 int rwlock_rd_lock(RWLock *lock) {
-    int err;
-    if ((err = pthread_mutex_lock(&lock->mutex)) != 0) syserr("", err);
-
+    pthread_mutex_lock(&lock->mutex);
     ++lock->wait_rd;
-    if (lock->wait_wr > 0 || lock->work_wr > 0) { // TODO: check
+    if (lock->wait_wr > 0 || lock->work_wr > 0) {
         // reader should wait
         do {
-            if ((err = pthread_cond_wait(&lock->to_read, &lock->mutex)) != 0)
-                syserr("", err);
+            pthread_cond_wait(&lock->to_read, &lock->mutex);
         } while (lock->work_wr > 0);
     }
     --lock->wait_rd;
-
     ++lock->work_rd;
-    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
-        syserr("", err);
+    pthread_mutex_unlock(&lock->mutex);
     return 0;
 }
 
 // Release read lock.
 int rwlock_rd_unlock(RWLock *lock) {
-    int err;
-    if ((err = pthread_mutex_lock(&lock->mutex)) != 0) syserr("", err);
-
+    pthread_mutex_lock(&lock->mutex);
     --lock->work_rd;
     if (lock->work_rd == 0 && lock->wait_wr > 0) {
-        if ((err = pthread_cond_signal(&lock->to_write)) != 0)
-            syserr("", err);
+        pthread_cond_signal(&lock->to_write);
     } else if (lock->work_rd == 0 && lock->wait_rd > 0) {
-        if ((err = pthread_cond_broadcast(&lock->to_read)) != 0)
-            syserr("", err);
+        pthread_cond_broadcast(&lock->to_read);
     }
-    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
-        syserr("", err);
+    pthread_mutex_unlock(&lock->mutex);
     return 0;
 }
 
 // Acquire write lock.
 int rwlock_wr_lock(RWLock *lock) {
-    int err;
-    if ((err = pthread_mutex_lock(&lock->mutex)) != 0) syserr("", err);
-
+    pthread_mutex_lock(&lock->mutex);
     ++lock->wait_wr;
     while (lock->work_rd > 0 || lock->work_wr > 0) {
         // writer should wait
-        if ((err = pthread_cond_wait(&lock->to_write, &lock->mutex)) != 0)
-            syserr("", err);
+        pthread_cond_wait(&lock->to_write, &lock->mutex);
+
     }
     --lock->wait_wr;
     ++lock->work_wr;
-    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
-        syserr("", err);
+    pthread_mutex_unlock(&lock->mutex);
     return 0;
 }
 
 // Release write lock.
 int rwlock_wr_unlock(RWLock *lock) {
-    int err;
-    if ((err = pthread_mutex_lock(&lock->mutex)) != 0) syserr("", err);
-
+    pthread_mutex_lock(&lock->mutex);
     --lock->work_wr;
     // always at most only one writer working
     if (lock->wait_rd > 0) {
-        if ((err = pthread_cond_broadcast(&lock->to_read)) != 0)
-            syserr("", err);
+        pthread_cond_broadcast(&lock->to_read);
     } else if (lock->wait_wr > 0) {
-        if ((err = pthread_cond_signal(&lock->to_write)) != 0)
-            syserr("", err);
+        pthread_cond_signal(&lock->to_write);
     }
-    if ((err = pthread_mutex_unlock(&lock->mutex)) != 0)
-        syserr("", err);
+    pthread_mutex_unlock(&lock->mutex);
     return 0;
 }
 
 int rwlock_free(RWLock *lock) {
-    int err;
-
-    if ((err = pthread_cond_destroy(&lock->to_read)) != 0) syserr("", err);
-    if ((err = pthread_cond_destroy(&lock->to_write)) != 0) syserr("", err);
-    if ((err = pthread_mutex_destroy(&lock->mutex)) != 0) syserr("", err);
+    pthread_cond_destroy(&lock->to_read);
+    pthread_cond_destroy(&lock->to_write);
+    pthread_mutex_destroy(&lock->mutex);
     free(lock);
     return 0;
 }

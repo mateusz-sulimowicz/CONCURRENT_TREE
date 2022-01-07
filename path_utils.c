@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "err.h"
 
 bool is_path_valid(const char *path) {
     size_t len = strlen(path);
@@ -48,6 +49,7 @@ char *make_path_to_parent(const char *path, char *component) {
 
     size_t subpath_len = p - path + 1; // Include '/' at p.
     char *result = malloc(subpath_len + 1); // Include terminating null character.
+    if (!result) syserr("", EMEMORY);
     strncpy(result, path, subpath_len);
     result[subpath_len] = '\0';
 
@@ -92,12 +94,14 @@ char *make_map_contents_string(HashMap *map) {
     if (!result_size) {
         // Note we can't just return "", as it can't be free'd.
         char *result = malloc(1);
+        if (!result) syserr("", EMEMORY);
         *result = '\0';
         free(keys);
         return result;
     }
 
     char *result = malloc(result_size);
+    if (!result) syserr("", EMEMORY);
     char *position = result;
     for (const char **key = keys; *key; ++key) {
         size_t keylen = strlen(*key);
@@ -115,7 +119,6 @@ char *make_map_contents_string(HashMap *map) {
 
 bool is_subpath(const char *path1, const char *path2) {
     assert(is_path_valid(path1) && is_path_valid(path2));
-
     const char *subpath1 = path1;
     const char *subpath2 = path2;
     char dirname1[MAX_FOLDER_NAME_LENGTH + 1];
@@ -126,13 +129,11 @@ bool is_subpath(const char *path1, const char *path2) {
             return false;
         }
     }
-
     return subpath1 && !subpath2;
 }
 
 char *make_common_path(const char *path1, const char *path2) {
     assert(is_path_valid(path1) && is_path_valid(path2));
-
     size_t i = 0;
     while (path1[i] != '\0'
            && path2[i] != '\0'
@@ -142,7 +143,7 @@ char *make_common_path(const char *path1, const char *path2) {
 
     size_t common_len = i;
     char *subpath = malloc(common_len + 1);
-    if (!subpath) return NULL;
+    if (!subpath) syserr("", EMEMORY);
 
     strncpy(subpath, path1, common_len);
     subpath[common_len] = '\0';
@@ -155,7 +156,6 @@ int split_common_path(char **path1, char **path2) {
     assert(is_path_valid(*path1) && is_path_valid(*path2));
 
     char *common_path = make_common_path(*path1, *path2);
-    if (!common_path) return -1;
 
     size_t common_path_len = strlen(common_path);
     *path1 += common_path_len - 1; // -1 to not cut off the last common '/'
