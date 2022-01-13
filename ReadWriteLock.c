@@ -73,9 +73,9 @@ int rwlock_rd_lock(RWLock *lock) {
 int rwlock_rd_unlock(RWLock *lock) {
     pthread_mutex_lock(&lock->mutex);
     --lock->work_rd;
-    if (lock->work_rd == 0 && lock->wait_wr > 0) {
+    if (lock->cascade_counter == 0 && lock->work_rd == 0 && lock->wait_wr > 0) {
         pthread_cond_signal(&lock->to_write);
-    } else if (lock->work_rd == 0 && lock->wait_rd > 0) {
+    } else if (lock->cascade_counter == 0 && lock->work_rd == 0 && lock->wait_rd > 0) {
         lock->cascade_counter = lock->wait_rd;
         pthread_cond_broadcast(&lock->to_read);
     }
@@ -102,10 +102,10 @@ int rwlock_wr_unlock(RWLock *lock) {
     pthread_mutex_lock(&lock->mutex);
     --lock->work_wr;
     // always at most only one writer working
-    if (lock->wait_rd > 0) {
+    if (lock->cascade_counter == 0 && lock->wait_rd > 0) {
         lock->cascade_counter = lock->wait_rd;
         pthread_cond_broadcast(&lock->to_read);
-    } else if (lock->wait_wr > 0) {
+    } else if (lock->cascade_counter == 0 && lock->wait_wr > 0) {
         pthread_cond_signal(&lock->to_write);
     }
     pthread_mutex_unlock(&lock->mutex);
