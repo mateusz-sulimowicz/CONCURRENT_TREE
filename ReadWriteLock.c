@@ -12,6 +12,7 @@ struct RWLock {
     size_t wait_rd;
     size_t work_wr;
     size_t work_rd;
+    size_t change;
     pthread_cond_t to_read;
     pthread_cond_t to_write;
     pthread_mutex_t mutex;
@@ -29,6 +30,7 @@ RWLock *rwlock_new() {
     r->wait_rd = 0;
     r->work_wr = 0;
     r->work_rd = 0;
+    r->change = 0;
     return r;
 }
 
@@ -36,12 +38,14 @@ RWLock *rwlock_new() {
 int rwlock_rd_lock(RWLock *lock) {
     pthread_mutex_lock(&lock->mutex);
     ++lock->wait_rd;
-    if (lock->wait_wr > 0 || lock->work_wr > 0) {
+    if (lock->change > 0 || lock->wait_wr > 0 || lock->work_wr > 0) {
         // reader should wait
         do {
             pthread_cond_wait(&lock->to_read, &lock->mutex);
-        } while (lock->work_wr > 0);
+        } while (lock->work_wr > 0 || lock->change == 0);
+        --lock->change;
     }
+
     --lock->wait_rd;
     ++lock->work_rd;
     pthread_mutex_unlock(&lock->mutex);
@@ -55,6 +59,7 @@ int rwlock_rd_unlock(RWLock *lock) {
     if (lock->work_rd == 0 && lock->wait_wr > 0) {
         pthread_cond_signal(&lock->to_write);
     } else if (lock->work_rd == 0 && lock->wait_rd > 0) {
+        lock->change = lock->wait_rd;
         pthread_cond_broadcast(&lock->to_read);
     }
     pthread_mutex_unlock(&lock->mutex);
@@ -65,11 +70,9 @@ int rwlock_rd_unlock(RWLock *lock) {
 int rwlock_wr_lock(RWLock *lock) {
     pthread_mutex_lock(&lock->mutex);
     ++lock->wait_wr;
-    if (lock->wait_rd > 0 || lock->work_rd > 0 || lock->work_wr > 0) {
+    while (lock->work_rd > 0 || lock->work_wr > 0 || lock->change > 0) {
         // writer should wait
-        do {
-            pthread_cond_wait(&lock->to_write, &lock->mutex);
-        } while (lock->work_rd > 0 || lock->work_wr > 0);
+        pthread_cond_wait(&lock->to_write, &lock->mutex);
     }
     --lock->wait_wr;
     ++lock->work_wr;
@@ -83,6 +86,7 @@ int rwlock_wr_unlock(RWLock *lock) {
     --lock->work_wr;
     // always at most only one writer working
     if (lock->wait_rd > 0) {
+        lock->change = lock->wait_rd;
         pthread_cond_broadcast(&lock->to_read);
     } else if (lock->wait_wr > 0) {
         pthread_cond_signal(&lock->to_write);
