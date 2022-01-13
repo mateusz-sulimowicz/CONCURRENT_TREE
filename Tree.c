@@ -48,13 +48,13 @@ struct Directory {
 
 Directory *dir_new(Directory *parent) {
     Directory *d = malloc(sizeof(Directory));
-    if (!d) syserr("", EMEMORY);
+    if (!d) syserr("memory alloc failed!");
 
     d->subdirs = hmap_new();
-    if (!d->subdirs) syserr("", EMEMORY);
+    if (!d->subdirs) syserr("memory alloc failed!");
 
     d->lock = rwlock_new();
-    if (!d->lock) syserr("", EMEMORY);
+    if (!d->lock) syserr("memory alloc failed!");
 
     d->parent = parent;
     return d;
@@ -209,7 +209,7 @@ int dir_find_wrlock(Directory **out, Directory *root, const char *path, bool unl
 int dir_find_common(Directory **out, Directory *root, const char *path1, const char *path2) {
     assert(root != NULL && is_path_valid(path1) && is_path_valid(path2));
     char *common_path = make_common_path(path1, path2);
-    if (!common_path) syserr("", EMEMORY);
+    if (!common_path) syserr("memory alloc failed!");
 
     int err = dir_find_rdlock_parent(out, root, common_path);
     free(common_path);
@@ -282,13 +282,13 @@ struct Tree {
 
 Tree *tree_new() {
     Tree *t = malloc(sizeof(Tree));
-    if (!t) syserr("", EMEMORY);
+    if (!t) syserr("memory alloc failed!");
 
     Directory *dummy = dir_new(NULL);
-    if (!dummy) syserr("", EMEMORY);
+    if (!dummy) syserr("memory alloc failed!");
 
     t->root = dir_new(dummy);
-    if (!t->root) syserr("", EMEMORY);
+    if (!t->root) syserr("memory alloc failed!");
     return t;
 }
 

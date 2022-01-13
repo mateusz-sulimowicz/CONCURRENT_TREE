@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <sys/errno.h>
 #include "ReadWriteLock.h"
 #include "err.h"
-
 
 /**
  * Read-write lock implementation.
@@ -20,16 +18,12 @@ struct RWLock {
 };
 
 RWLock *rwlock_new() {
-    int err;
     RWLock *r = malloc(sizeof(RWLock));
-    if (!r) syserr("", EMEMORY);
+    if (!r) syserr("memory alloc failed!");
 
-    if ((err = pthread_mutex_init(&r->mutex, 0)) != 0)
-        syserr("", err);
-    if (pthread_cond_init(&r->to_write, 0) != 0)
-        syserr("", err);
-    if (pthread_cond_init(&r->to_read, 0) != 0)
-        syserr("", err);
+    pthread_mutex_init(&r->mutex, 0);
+    pthread_cond_init(&r->to_write, 0);
+    pthread_cond_init(&r->to_read, 0);
 
     r->wait_wr = 0;
     r->wait_rd = 0;
@@ -71,10 +65,11 @@ int rwlock_rd_unlock(RWLock *lock) {
 int rwlock_wr_lock(RWLock *lock) {
     pthread_mutex_lock(&lock->mutex);
     ++lock->wait_wr;
-    while (lock->work_rd > 0 || lock->work_wr > 0) {
+    if (lock->wait_rd > 0 || lock->work_rd > 0 || lock->work_wr > 0) {
         // writer should wait
-        pthread_cond_wait(&lock->to_write, &lock->mutex);
-
+        do {
+            pthread_cond_wait(&lock->to_write, &lock->mutex);
+        } while (lock->work_rd > 0 || lock->work_wr > 0);
     }
     --lock->wait_wr;
     ++lock->work_wr;
