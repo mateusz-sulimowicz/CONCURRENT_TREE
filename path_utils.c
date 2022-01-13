@@ -49,7 +49,7 @@ char *make_path_to_parent(const char *path, char *component) {
 
     size_t subpath_len = p - path + 1; // Include '/' at p.
     char *result = malloc(subpath_len + 1); // Include terminating null character.
-    if (!result) syserr("", EMEMORY);
+    if (!result) syserr("memory alloc failed!");
     strncpy(result, path, subpath_len);
     result[subpath_len] = '\0';
 
@@ -94,14 +94,14 @@ char *make_map_contents_string(HashMap *map) {
     if (!result_size) {
         // Note we can't just return "", as it can't be free'd.
         char *result = malloc(1);
-        if (!result) syserr("", EMEMORY);
+        if (!result) syserr("memory alloc failed!");
         *result = '\0';
         free(keys);
         return result;
     }
 
     char *result = malloc(result_size);
-    if (!result) syserr("", EMEMORY);
+    if (!result) syserr("memory alloc failed!");
     char *position = result;
     for (const char **key = keys; *key; ++key) {
         size_t keylen = strlen(*key);
@@ -143,7 +143,7 @@ char *make_common_path(const char *path1, const char *path2) {
 
     size_t common_len = i;
     char *subpath = malloc(common_len + 1);
-    if (!subpath) syserr("", EMEMORY);
+    if (!subpath) syserr("memory alloc failed!");
 
     strncpy(subpath, path1, common_len);
     subpath[common_len] = '\0';
