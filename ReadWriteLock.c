@@ -6,13 +6,30 @@
 
 /**
  * Read-write lock implementation.
+ *
+ * Cascade-style thread waking is simulated
+ * by setting the cascade_counter to positive value.
+ * Interpretation:
+ * "Now exactly `cascade_counter` waiting readers
+ * should acquire the lock. "
+ *
+ * Reader can only be awaken when
+ * the cascade_counter is positive.
+ * Each awaken reader decrements the counter's value.
+ *
+ * When the counter is set to positive value,
+ * no new (i.e. not waiting on conditional variable)
+ * threads can acquire the lock.
+ *
+ * Also, waiting writers can only stop waiting
+ * when the counter is zero at the time of their wake up.
  */
 struct RWLock {
-    size_t wait_wr;
-    size_t wait_rd;
-    size_t work_wr;
-    size_t work_rd;
-    size_t cascade_counter;
+    size_t wait_wr; // number of waiting writers
+    size_t wait_rd; // number of waiting readers
+    size_t work_wr; // number of working writers
+    size_t work_rd; // number of working readers
+    size_t cascade_counter; // number of yet to-be-awaken readers
     pthread_cond_t to_read;
     pthread_cond_t to_write;
     pthread_mutex_t mutex;
